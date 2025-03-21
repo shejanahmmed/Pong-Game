@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.Random;
+import javax.sound.sampled.*;
 
 public class GamePanel extends JPanel implements Runnable, KeyListener {
     static final int GAME_WIDTH = 1000;
@@ -20,8 +21,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     Paddle paddle2;
     Ball ball;
     Score score;
-
     private Image backgroundImage;
+    Clip hitSound;
 
     // Constructor
     GamePanel() {
@@ -29,13 +30,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         newBall();
         score = new Score(GAME_WIDTH, GAME_HEIGHT);
         this.setFocusable(true);
-        this.addKeyListener(this); // Registering GamePanel itself as KeyListener
+        this.addKeyListener(this);
         this.setPreferredSize(SCREEN_SIZE);
-        this.requestFocusInWindow(); // Ensures the panel receives keyboard focus
+        this.requestFocusInWindow();
 
         backgroundImage = new ImageIcon(getClass().getResource("/resources/grassField.jpg")).getImage();
-
-
+        
+        // Load the hit sound
+        try {
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(getClass().getResource("/resources/PongSound.wav"));
+            hitSound = AudioSystem.getClip();
+            hitSound.open(audioInputStream);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         gameThread = new Thread(this);
         gameThread.start();
@@ -76,9 +84,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ball.y <= 0 || ball.y >= GAME_HEIGHT - BALL_DIAMETER) {
             ball.yVelocity = -ball.yVelocity;
         }
+        
         if (ball.intersects(paddle1) || ball.intersects(paddle2)) {
             ball.xVelocity = -ball.xVelocity;
+            playHitSound(); // Play sound effect when ball hits paddle
         }
+
         if (paddle1.y <= 0) paddle1.y = 0;
         if (paddle1.y >= GAME_HEIGHT - PADDLE_HEIGHT) paddle1.y = GAME_HEIGHT - PADDLE_HEIGHT;
         if (paddle2.y <= 0) paddle2.y = 0;
@@ -95,6 +106,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             newPaddles();
             newBall();
             System.out.println("Player 1 : " + score.player1);
+        }
+    }
+
+    public void playHitSound() {
+        if (hitSound != null) {
+            hitSound.stop();
+            hitSound.setFramePosition(0);
+            hitSound.start();
         }
     }
 
